@@ -57,7 +57,7 @@ def bot(): #Главная функция
 
 
         #Обработка обращений к боту
-#         if user_data.startswith("[club172085604|@timetablebot51], "): #Если строка начинается с @idбота, то @idбота убирается из строки
+        if user_data.startswith("[club172085604|@timetablebot51], "): #Если строка начинается с @idбота, то @idбота убирается из строки
             user_message = user_data.replace("[club172085604|@timetablebot51], ", "")
         elif user_data.startswith("[club172085604|@timetablebot51] "):
             user_message = user_data.replace("[club172085604|@timetablebot51] ", "")
