@@ -1,5 +1,6 @@
 #Импортироваине библиотек
 from datetime import datetime
+import sqlite3
 from flask import Flask, request, json
 import vk
 
@@ -29,7 +30,7 @@ def bot(): #Главная функция
           "payload": "{\"button\": \"1\"}",
           "label": "Расписание"
         },
-        "color": "primary"
+        "color": "default"
       }]]}
 
     #Перевод клавиатуры в строку, как просит VK API
@@ -37,9 +38,9 @@ def bot(): #Главная функция
     keyboard = str(keyboard.decode('utf-8'))
 
     #Переменные с часами, минутами и днем недели
-    hours = int(datetime.strftime(datetime.now(), "%H")) + 3 #Время +3 часа, т.к. на сервере часовой пояс UTC
+    hour = int(datetime.strftime(datetime.now(), "%H")) + 3 #Время +3 часа, т.к. на сервере часовой пояс UTC
     minutes = int(datetime.strftime(datetime.now(), "%M"))
-    weekDay = str(datetime.today().weekday())
+    weekday = str(datetime.today().weekday())
 
     if 'type' not in data.keys(): #Если запрос не от ВК, то скрипт не выполняется
         return 'not vk'
@@ -57,60 +58,54 @@ def bot(): #Главная функция
 
 
         #Обработка обращений к боту
-        if user_data.startswith("[club172085604|@timetablebot51], "): #Если строка начинается с @idбота, то @idбота убирается из строки
-            user_message = user_data.replace("[club172085604|@timetablebot51], ", "")
-        elif user_data.startswith("[club172085604|@timetablebot51] "):
-            user_message = user_data.replace("[club172085604|@timetablebot51] ", "")
+        if user_data.startswith("[club172085604|@ttbot51], "): #Если строка начинается с @idбота, то @idбота убирается из строки
+            user_message = user_data.replace("[club172085604|@ttbot51], ", "")
+        elif user_data.startswith("[club172085604|@ttbot51] "):
+            user_message = user_data.replace("[club172085604|@ttbot51] ", "")
         else:
             user_message = user_data
 
 
         #Обработка команд и ответ на них
-        if user_message == "Начать":
+        if user_message.lower() == "начать":
             api.messages.send(user_id = str(user_id), message = 'Привет, я бот, предназначенный для отправки расписания и домашней работы 51-ой группе. Чтобы посмотреть список команд, введите "помощь"', keyboard = keyboard)
 
         elif user_message.lower() == "расписание":
-            api.messages.send(peer_id = str(peer_id), message = raspisanie())
+            api.messages.send(peer_id = str(peer_id), message = raspisanie(int(hour), int(weekday)))
 
-        elif user_message.lower() == "привет":
-            api.messages.send(peer_id = str(peer_id), message = "Привет, если ты не знаешь как мной пользоваться введи \"помощь\"")
+        elif "скайнет говно" in user_message.lower()  :
+            api.messages.send(peer_id = str(peer_id), message = "А еще кодом Марата можно подтереть жопу")
 
         elif user_message.lower() == "помощь":
             text = "Список команд:\n расписание,\n домашняя работа "
             api.messages.send(peer_id = str(peer_id), message = text)
 
-        elif user_message.lower() == "рэп для дебилов?":
-            api.messages.send(peer_id = str(peer_id), message = 'Даже не обсуждается')
+        elif "рэп" in user_message.lower() :
+            api.messages.send(peer_id = str(peer_id), message = 'рэп для дебилов')
 
-        elif user_message.lower() == "марат лох?":
-            api.messages.send(peer_id = str(peer_id), message = 'Да')
+        elif "марат" in user_message.lower():
+            api.messages.send(peer_id = str(peer_id), message = 'Марат лох')
 
         elif user_message.lower() == "время":
-            api.messages.send(peer_id = str(peer_id), message = str(hours) + ":" + str(minutes) + " " + weekDay)
-
-        else:
-            api.messages.send(peer_id = str(peer_id), message = 'Такой команды нет')
-
-        if str(user_id) == "259297514": #Вадим - ониме
-            api.messages.send(peer_id = str(peer_id), message = 'Тупое ониме')
+            api.messages.send(peer_id = str(peer_id), message = str(hour) + ":" + str(minutes) + " " + weekday)
 
         return 'ok' #Выполненная функция должна возвращать ok, как требует VK API
 
 
 
-def raspisanie(): #Не смотрите на этот говнокод, пожалуйста
+def raspisanie(hours, weekDay): #Не смотрите на этот говнокод, пожалуйста
 
     #Ну если так хочется, то вкратце эта функция возвращает строку с расписанием в зависимости от даты и времени
-    
-    hours = int(datetime.strftime(datetime.now(), "%H")) + 3
-    weekDay = int(datetime.today().weekday())
 
     times = ["8:00", "9:30", "9:40", "11:10", "11:50", "13:20", "13:30", "15:00", "15:10", "16:40"]
     classes = ["ТСИ", "Математика", "Физ-ра", "Основы программирования", "Английский", "Архитектура комп. систем", "IT", "Операционнные системы"]
     classRooms = ["109, УЛК5", "412, УЛК2", "308, УБК", "320, УЛК2", "322, УБК", "320, УБК", "418, УЛК2", "302, УЛК2", "308, УЛК2"]
     teachers = ["Альбина Рашидовна", "Анна Николаевна", "", "Екатерина Валерьевна", "Марьям Рифовна", "Айгуль Фларитовна", "Айрат Анварович", "Ольга Николаевна"]
 
-    isHighWeek = True
+    if datetime.now().isocalendar()[1] % 2:
+        isHighWeek = True
+    else:
+        isHighWeek = False
 
     if isHighWeek == False:
 
@@ -383,8 +378,7 @@ def raspisanie(): #Не смотрите на этот говнокод, пож�
             isHighWeek = False
             return "На сегодня пар больше нет"
 
-    text = "Следующая пара - " + zanyatie + "\n" + time + "\n" + "Аудитория - " + classRoom + "\n" + "Препод - " + teacher
+    text = "Следующая пара - " + zanyatie + "\n" + time + "\n" + "Аудитория - " + classRoom + "\n" + "Препод - " + teacher + "\n\n"
     return text
-
 
 
