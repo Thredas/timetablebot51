@@ -1,7 +1,9 @@
+#Импортироваине библиотек
 from datetime import datetime
 from flask import Flask, request, json
 import vk
 
+#Переменные с клчом доступа сообщества и кодом подтверждения
 token = '4445b9ec75eca61c00278e8c0ff24a2faacb108eb8551141c71b0aa7fd9385235e6eafcf25e3d0ca77459'
 confirmation_token = '209bdff8'
 
@@ -13,10 +15,11 @@ def hello_world():
 
 @app.route('/', methods=['POST'])
 
-def bot():
+def bot(): #Главная функция
 
-    data = json.loads(request.data)
+    data = json.loads(request.data) #Получаем данные JSON
 
+    #Кнопка
     keyboard = {
     "one_time": False,
     "buttons": [
@@ -29,30 +32,32 @@ def bot():
         "color": "primary"
       }]]}
 
+    #Перевод клавиатуры в строку, как просит VK API
     keyboard = json.dumps(keyboard, ensure_ascii=False).encode('utf-8')
     keyboard = str(keyboard.decode('utf-8'))
 
-    hours = int(datetime.strftime(datetime.now(), "%H")) + 3
+    #Переменные с часами, минутами и днем недели
+    hours = int(datetime.strftime(datetime.now(), "%H")) + 3 #Время +3 часа, т.к. на сервере часовой пояс UTC
     minutes = int(datetime.strftime(datetime.now(), "%M"))
     weekDay = str(datetime.today().weekday())
 
-    if 'type' not in data.keys():
+    if 'type' not in data.keys(): #Если запрос не от ВК, то скрипт не выполняется
         return 'not vk'
 
-    if data['type'] == 'confirmation':
+    if data['type'] == 'confirmation': #Если запрос на подтверждение сервера, то возращаем код подтверждения
         return confirmation_token
 
-    elif data['type'] == 'message_new':
+    elif data['type'] == 'message_new': #Если приходит новое сообщение
 
         session = vk.Session(access_token = token)
         api = vk.API(session, v=5.85)
-        user_id = data['object']['from_id']
-        peer_id = data['object']['peer_id']
-        user_data = data['object']['text']
+        user_id = data['object']['from_id'] #Получение UserId из JSON
+        peer_id = data['object']['peer_id'] #Получение PeerID, чтобы бот знал, откуда пришло сообщение
+        user_data = data['object']['text'] #Получение текста, отправленного пользователем
 
 
         #Обработка обращений к боту
-        if user_data.startswith("[club172085604|@timetablebot51], "):
+#         if user_data.startswith("[club172085604|@timetablebot51], "): #Если строка начинается с @idбота, то @idбота убирается из строки
             user_message = user_data.replace("[club172085604|@timetablebot51], ", "")
         elif user_data.startswith("[club172085604|@timetablebot51] "):
             user_message = user_data.replace("[club172085604|@timetablebot51] ", "")
@@ -62,7 +67,7 @@ def bot():
 
         #Обработка команд и ответ на них
         if user_message == "Начать":
-            api.messages.send(access_token = token, user_id = str(user_id), message = 'Привет, я бот, предназначенный для отправки расписания и домашней работы 51-ой группе. Чтобы посмотреть список команд, введите "помощь"', keyboard = keyboard)
+            api.messages.send(user_id = str(user_id), message = 'Привет, я бот, предназначенный для отправки расписания и домашней работы 51-ой группе. Чтобы посмотреть список команд, введите "помощь"', keyboard = keyboard)
 
         elif user_message.lower() == "расписание":
             api.messages.send(peer_id = str(peer_id), message = raspisanie())
@@ -86,15 +91,17 @@ def bot():
         else:
             api.messages.send(peer_id = str(peer_id), message = 'Такой команды нет')
 
-        if str(user_id) == "259297514":
+        if str(user_id) == "259297514": #Вадим - ониме
             api.messages.send(peer_id = str(peer_id), message = 'Тупое ониме')
 
-        return 'ok'
+        return 'ok' #Выполненная функция должна возвращать ok, как требует VK API
 
 
 
-def raspisanie():
+def raspisanie(): #Не смотрите на этот говнокод, пожалуйста
 
+    #Ну если так хочется, то вкратце эта функция возвращает строку с расписанием в зависимости от даты и времени
+    
     hours = int(datetime.strftime(datetime.now(), "%H")) + 3
     weekDay = int(datetime.today().weekday())
 
