@@ -4,7 +4,7 @@ import sqlite3
 from flask import Flask, request, json
 import vk
 
-#Переменные с ключом доступа сообщества и кодом подтверждения
+#Переменные с клчом доступа сообщества и кодом подтверждения
 token = '4445b9ec75eca61c00278e8c0ff24a2faacb108eb8551141c71b0aa7fd9385235e6eafcf25e3d0ca77459'
 confirmation_token = '209bdff8'
 
@@ -45,7 +45,7 @@ def bot(): #Главная функция
           "payload": "{\"button\": \"1\"}",
           "label": "Следующая пара"
         },
-        "color": "primary"
+        "color": "positive"
       }]
       ]}
 
@@ -123,10 +123,10 @@ def timetable(isTomorrow):
         isHighWeek = 0
 
     if isTomorrow:
-        weekDay = str(datetime.today().weekday() + 2)
+        weekDay = datetime.today().weekday() + 2
         text = "Расписание на завтра: \n\n" + "*****************************" + "\n\n"
     else:
-        weekDay = str(datetime.today().weekday() + 1)
+        weekDay = datetime.today().weekday() + 1
         text = "Расписание на сегодня: \n\n" + "*****************************" + "\n\n"
 
     conn = sqlite3.connect('TimeTableData.db')
@@ -134,10 +134,10 @@ def timetable(isTomorrow):
     cursor.execute('SELECT * FROM timeTable')
     row = cursor.fetchone()
 
-    while weekDay not in row[8]:
+    while weekDay != row[8]:
         row = cursor.fetchone()
 
-    while weekDay in row[8]:
+    while weekDay == row[8]:
         if row[3] == isHighWeek:
             if row[6] == 1:
                 classType = "Практика "
@@ -159,13 +159,8 @@ def next_class():
 
     hour = (int(datetime.strftime(datetime.now(), "%H")) + 3) * 60
     minutes = int(datetime.strftime(datetime.now(), "%M"))
-    weekDay = str(datetime.today().weekday() + 2)
+    weekDay = datetime.today().weekday() + 1
     nowTime = hour + minutes
-    timeList = []
-    firstClassTime = 0
-    secondClassTime = 0
-    thirdClassTime = 0
-    forthClassTime = 0
     text = "Сегодня пар больше нет"
 
     conn = sqlite3.connect('TimeTableData.db')
@@ -178,43 +173,28 @@ def next_class():
     else:
         isHighWeek = 1
 
-    while weekDay not in row[8]:
+    while weekDay != row[8]:
         row = cursor.fetchone()
 
-    while weekDay in row[8]:
+    while weekDay == row[8]:
         if row[3] == isHighWeek:
+
             if row[6] == 1:
                 classType = "Практика "
             else:
                 classType = "Лекция "
 
             shedule = str(row[2]) + ", " + classType + "\n" + str(row[1]) + "\n" + "Аудитория - " + str(row[5]) + ", " + str(row[4]) + "\n" + "Препод - " + str(row[7]) + "\n\n"
-            timeList.append(row[1])
-            timeList.append(shedule)
-            row = cursor.fetchone()
+
+            classTime = int(row[1][0] + row[1][1]) * 60 + int(row[1][3] + row[1][4])
+
+            if nowTime <= classTime:
+                text = shedule
+                break
+            else:
+                row = cursor.fetchone()
 
         else:
             row = cursor.fetchone()
-
-    if timeList[0] is not None:
-        firstClassTime = int(timeList[0][0] + timeList[0][1]) * 60 + int(timeList[0][3] + timeList[0][4])
-        if nowTime < firstClassTime:
-            text = timeList[1]
-
-    if timeList[2] is not None:
-        secondClassTime = int(timeList[2][0] + timeList[2][1]) * 60 + int(timeList[2][3] + timeList[2][4])
-        if nowTime > firstClassTime and nowTime < secondClassTime:
-            text = timeList[3]
-
-    if timeList[4] is not None:
-        thirdClassTime = int(timeList[4][0] + timeList[4][1]) * 60 + int(timeList[4][3] + timeList[4][4])
-        if nowTime > secondClassTime and nowTime < thirdClassTime:
-            text = timeList[5]
-
-    if timeList[6] is not None:
-        forthClassTime = int(timeList[6][0] + timeList[6][1]) * 60 + int(timeList[6][3] + timeList[6][4])
-        if nowTime > thirdClassTime and nowTime < forthClassTime:
-            text = timeList[7]
-
 
     return text
