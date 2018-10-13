@@ -1,8 +1,7 @@
 #Импортироваине библиотек
 from datetime import datetime
-import sqlite3
+import sqlite3, vk, apiai
 from flask import Flask, request, json
-import vk
 
 #Переменные с клчом доступа сообщества и кодом подтверждения
 token = '4445b9ec75eca61c00278e8c0ff24a2faacb108eb8551141c71b0aa7fd9385235e6eafcf25e3d0ca77459'
@@ -20,7 +19,7 @@ def bot(): #Главная функция
 
     data = json.loads(request.data) #Получаем данные JSON
 
-    #Кнопка
+    #Кнопки в JSON
     keyboard = {
     "one_time": False,
     "buttons": [
@@ -46,6 +45,14 @@ def bot(): #Главная функция
           "label": "Следующая пара"
         },
         "color": "positive"
+      }],
+      [{
+        "action": {
+          "type": "text",
+          "payload": "{\"button\": \"1\"}",
+          "label": "ИИ, привет!"
+        },
+        "color": "primary"
       }]
       ]}
 
@@ -95,8 +102,8 @@ def bot(): #Главная функция
         elif "пары завтра" in user_message.lower():
             api.messages.send(peer_id = str(peer_id), message = timetable(True))
 
-        elif "т1000" in user_message.lower()  :
-            api.messages.send(peer_id = str(peer_id), message = "А кодом Марата можно подтереть жопу")
+        elif "код марата" in user_message.lower():
+            api.messages.send(peer_id = str(peer_id), message = "Кодом Марата можно подтереть жопу")
 
         elif user_message.lower() == "помощь":
             text = "Список команд:\n пары сегодня,\n пары завтра, \n следующая пара "
@@ -111,11 +118,25 @@ def bot(): #Главная функция
         elif user_message.lower() == "время":
             api.messages.send(peer_id = str(peer_id), message = str(hour) + ":" + str(minutes) + " " + weekday)
 
+        elif "ии" in user_message.lower(): #Если в сообщении от юзера есть слово "ии", то ответит ии от Google Dialogflow
+            request2 = apiai.ApiAI('6a22bedd8a9d4b0998e84bba21654039').text_request()
+            request2.lang = 'ru'
+            request2.session_id = 'BatlabAIBot'
+            request2.query = user_message.lower()
+            responseJson = json.loads(request2.getresponse().read().decode('utf-8'))
+            response = responseJson['result']['fulfillment']['speech']
+
+            if response:
+                api.messages.send(peer_id = str(peer_id), message = response)
+            else:
+                api.messages.send(peer_id = str(peer_id), message = 'Я не понял')
+
+
         return 'ok' #Выполненная функция должна возвращать ok, как требует VK API
 
 
 
-def timetable(isTomorrow):
+def timetable(isTomorrow): #Эта функция возвращает расписание на сегодня или завтра
 
     if datetime.now().isocalendar()[1] % 2 == 1:
         isHighWeek = 1
@@ -124,10 +145,10 @@ def timetable(isTomorrow):
 
     if isTomorrow:
         weekDay = datetime.today().weekday() + 2
-        text = "Расписание на завтра: \n\n" + "*****************************" + "\n\n"
+        text = "Расписание на завтра: \n\n" + "\n\n"
     else:
         weekDay = datetime.today().weekday() + 1
-        text = "Расписание на сегодня: \n\n" + "*****************************" + "\n\n"
+        text = "Расписание на сегодня: \n\n" + "\n\n"
 
     conn = sqlite3.connect('TimeTableData.db')
     cursor = conn.cursor()
@@ -144,7 +165,7 @@ def timetable(isTomorrow):
             else:
                 classType = "Лекция "
 
-            shedule = str(row[2]) + ", " + classType + "\n" + str(row[1]) + "\n" + "Аудитория - " + str(row[5]) + ", " + str(row[4]) + "\n" + "Препод - " + str(row[7]) + "\n\n" + "*****************************" + "\n\n"
+            shedule = str(row[2]) + ", " + classType + "\n" + str(row[1]) + "\n" + "Аудитория - " + str(row[5]) + ", " + str(row[4]) + "\n" + "Препод - " + str(row[7]) + "\n\n" + "\n\n"
             text = text + shedule
             row = cursor.fetchone()
         else:
@@ -155,7 +176,7 @@ def timetable(isTomorrow):
 
     return text
 
-def next_class():
+def next_class(): #Эта функция возвращает следующую пару, если по времени она еще есть
 
     hour = (int(datetime.strftime(datetime.now(), "%H")) + 3) * 60
     minutes = int(datetime.strftime(datetime.now(), "%M"))
@@ -169,9 +190,9 @@ def next_class():
     row = cursor.fetchone()
 
     if datetime.now().isocalendar()[1] % 2 == 1:
-        isHighWeek = 0
-    else:
         isHighWeek = 1
+    else:
+        isHighWeek = 0
 
     while weekDay != row[8]:
         row = cursor.fetchone()
